@@ -1543,7 +1543,12 @@ Strophe.Connection = function (service, options)
     // Select protocal based on service or options
     if (service.indexOf("ws:") === 0 || service.indexOf("wss:") === 0 ||
             proto.indexOf("ws") === 0) {
-        this._proto = new Strophe.Websocket(this);
+        if (this.options.backend === "Openfire") {
+            this._proto = new Openfire.Websocket(this);
+        }
+        else {
+            this._proto = new Strophe.Websocket(this);
+        }
     } else {
         this._proto = new Strophe.Bosh(this);
     }
@@ -2189,6 +2194,22 @@ Strophe.Connection.prototype = {
             }
         }
     },
+
+    /**
+     * Openfire websocket needs to call this function
+     */
+    _connected_of: function() {
+        this.connected = true;
+        this.authenticated = true;
+        this.resource = Strophe.getResourceFromJid(this.jid);
+        this.domain = Strophe.getDomainFromJid(this.jid);
+        
+        try {
+            this._changeConnectStatus(Strophe.Status.CONNECTED, null);
+        } catch (e) {
+            throw Error("User connection callback caused an exception: " + e);
+        }
+    }
 
     /** PrivateFunction: _doDisconnect
      *  _Private_ function to disconnect.
