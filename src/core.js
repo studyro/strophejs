@@ -2209,7 +2209,7 @@ Strophe.Connection.prototype = {
         } catch (e) {
             throw Error("User connection callback caused an exception: " + e);
         }
-    }
+    },
 
     /** PrivateFunction: _doDisconnect
      *  _Private_ function to disconnect.

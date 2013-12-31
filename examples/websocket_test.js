@@ -1,4 +1,4 @@
-var WS_SERVICE = 'ws://127.0.0.1:7070/ws'
+var WS_SERVICE = 'ws://127.0.0.1:7070/ws/'
 var connection = null;
 
 function log(msg) 
@@ -35,7 +35,7 @@ function onConnect(status)
 }
 
 $(document).ready(function () {
-    connection = new Strophe.Connection(WS_SERVICE);
+    connection = new Strophe.Connection(WS_SERVICE, {backend: "Openfire"});
     connection.rawInput = rawInput;
     connection.rawOutput = rawOutput;
 

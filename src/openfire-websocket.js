@@ -16,26 +16,28 @@ Openfire.Websocket = function(connection) {
         // If the service is not an absolute URL, assume it is a path and put the absolute
         // URL together from options, current URL and the path.
         var new_service = "";
-
+        
         if (connection.options.protocol === "ws" && window.location.protocol !== "https:") {
             new_service += "ws";
         } else {
             new_service += "wss";
         }
-
+        
         new_service += "://" + window.location.host;
-
+        
         if (service.indexOf("/") !== 0) {
             new_service += window.location.pathname + service;
         } else {
             new_service += service;
         }
-
+        
         connection.service = new_service;
     }
+    
+    console.log("service: " + connection.service);
 };
 
-Openfire.Connection.prototype = {
+Openfire.Websocket.prototype = {
     
     _reset: function() {
         return;
@@ -57,9 +59,11 @@ Openfire.Connection.prototype = {
     
     _closeSocket: function ()
     {
-        if (this.socket) { try {
-            this.socket.close();
-        } catch (e) {} }
+        if (this.socket) { 
+            try {
+                this.socket.close();
+            } catch (e) {} 
+        }
         this.socket = null;
     },
     
@@ -85,13 +89,34 @@ Openfire.Connection.prototype = {
         this.socket.onmessage = this._onMessage.bind(this);
     },
     
+    _onIdle: function () {
+        // send all queued stanzas.
+        var data = this._conn._data;
+        if (data.length > 0 && !this._conn.paused) {
+            for (i = 0; i < data.length; i++) {
+                if (data[i] !== null) {
+                    var stanza, rawStanza;
+                    
+                    stanza = data[i];
+                    rawStanza = Strophe.serialize(stanza);
+                    
+                    this._conn.xmlOutput(stanza);
+                    this._conn.rawOutput(rawStanza);
+                    this.socket.send(rawStanza);
+                }
+            }
+            this._conn._data = [];
+        }
+    },
+    
     _onOpen: function() {
         Strophe.info("Websocket open");
         this._conn._connected_of();
         
         // keep alive ping.
+        var scopedThis = this;
         this.interval = setInterval(function() {
-            this.sendRaw(" ")
+            scopedThis._sendRaw(" ");
         }, 10000);
     },
     
@@ -147,6 +172,20 @@ Openfire.Connection.prototype = {
         return stanza;
     },
     
+    // send raw text, here we use it to keep alive.
+    _sendRaw: function(text) {
+        if(!this._conn.connected || this.socket == null) {
+            throw Error("Not connected, cannot send packets.");
+        }
+        
+        if (text != " ") {
+            this._conn.xmlOutput(this._textToXML(text));
+            this._conn.rawOutput(text);
+        }
+        
+        this.socket.send(text);
+    },
+    
     _send: function() {
         this._conn.flush();
     },
@@ -154,5 +193,5 @@ Openfire.Connection.prototype = {
     _sendRestart: function() {
         clearTimeout(this._conn._idleTimeout);
         this._conn._onIdle.bind(this._conn)();
-    }
+    },
 };
